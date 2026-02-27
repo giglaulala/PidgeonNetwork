@@ -97,6 +97,7 @@ cp .env.local.example .env.local
 ```
 
 4. Open `.env.local` and fill in your values:
+
 ```
 NEXT_PUBLIC_SUPABASE_URL=https://xxxx.supabase.co
 NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJhbGci...
@@ -134,7 +135,7 @@ npx vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY
 ```
 User → localStorage (raw UUID, never leaves browser)
      → SHA-256 hash → sent to API routes → stored in DB
-     
+
 No auth. No sessions. No emails. Fully anonymous.
 ```
 
