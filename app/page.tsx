@@ -1,19 +1,40 @@
 import Image from 'next/image'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { Feed } from '@/components/feed/Feed'
+import { LeaderboardFeed } from '@/components/feed/LeaderboardFeed'
+import { FeedTabs } from '@/components/feed/FeedTabs'
 import { ComposeBox } from '@/components/feed/ComposeBox'
 import { SearchByNumber } from '@/components/SearchByNumber'
 import type { Post } from '@/types/supabase'
+import type { FeedTab } from '@/components/feed/FeedTabs'
 
 export const revalidate = 0
 
-async function getPosts(): Promise<{ posts: Post[]; totalCount: number }> {
+async function getStrollPosts(): Promise<{ posts: Post[]; totalCount: number }> {
   try {
     const supabase = createSupabaseServerClient()
     const { data, error, count } = await supabase
       .from('posts')
       .select('*', { count: 'exact' })
       .is('parent_id', null)
+      .order('created_at', { ascending: false })
+      .limit(50)
+
+    if (error) throw error
+    return { posts: data ?? [], totalCount: count ?? 0 }
+  } catch {
+    return { posts: [], totalCount: 0 }
+  }
+}
+
+async function getLeaderboardPosts(): Promise<{ posts: Post[]; totalCount: number }> {
+  try {
+    const supabase = createSupabaseServerClient()
+    const { data, error, count } = await supabase
+      .from('posts')
+      .select('*', { count: 'exact' })
+      .is('parent_id', null)
+      .order('upvotes', { ascending: false })
       .order('created_at', { ascending: false })
       .limit(50)
 
@@ -33,8 +54,19 @@ function getIssueDate() {
   })
 }
 
-export default async function HomePage() {
-  const { posts, totalCount } = await getPosts()
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: { tab?: string }
+}) {
+  const tab: FeedTab =
+    searchParams.tab === 'leaderboard' ? 'leaderboard' : 'stroll'
+
+  const { posts, totalCount } =
+    tab === 'leaderboard'
+      ? await getLeaderboardPosts()
+      : await getStrollPosts()
+
   const issueDate = getIssueDate()
 
   return (
@@ -95,9 +127,16 @@ export default async function HomePage() {
         <ComposeBox />
       </div>
 
+      {/* Feed tabs */}
+      <FeedTabs active={tab} />
+
       {/* Feed */}
       <section aria-label="Posts feed">
-        <Feed initialPosts={posts} initialTotalCount={totalCount} />
+        {tab === 'leaderboard' ? (
+          <LeaderboardFeed initialPosts={posts} />
+        ) : (
+          <Feed initialPosts={posts} initialTotalCount={totalCount} />
+        )}
       </section>
     </main>
   )

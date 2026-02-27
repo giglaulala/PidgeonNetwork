@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { useVote } from '@/hooks/useVote'
+import { useReport } from '@/hooks/useReport'
 import { deriveHandle } from '@/lib/identity'
 import { timeAgo, formatPostNumber } from '@/lib/utils'
 import type { Post } from '@/types/supabase'
@@ -20,6 +21,10 @@ export function CompactPostCard({ post, postNumber, index = 0, animate = false }
     postId: post.id,
     upvotes: post.upvotes,
     downvotes: post.downvotes,
+  })
+  const { hasReported, loading: reportLoading, report } = useReport({
+    postId: post.id,
+    reports: post.reports ?? 0,
   })
 
   const inner = (
@@ -76,6 +81,22 @@ export function CompactPostCard({ post, postNumber, index = 0, animate = false }
           }`}
         >
           - {downvotes}
+        </button>
+        <button
+          onClick={(e) => { e.preventDefault(); report() }}
+          disabled={reportLoading || hasReported}
+          aria-label="Report"
+          title={hasReported ? 'already reported' : 'report'}
+          className={`transition-opacity duration-150 ${
+            hasReported || reportLoading
+              ? 'opacity-30 cursor-not-allowed'
+              : 'text-dim hover:text-red-400 cursor-pointer'
+          }`}
+        >
+          <svg width="10" height="10" viewBox="0 0 11 11" fill="currentColor" aria-hidden>
+            <path d="M1 1h7l-1.5 3L8 7H1V1z" />
+            <rect x="1" y="9" width="1" height="2" />
+          </svg>
         </button>
         <span className="ml-auto font-mono text-[10px] text-border group-hover:text-dim transition-colors duration-150">
           read &rarr;

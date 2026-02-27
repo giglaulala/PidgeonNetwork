@@ -3,7 +3,9 @@
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { VoteButton } from '@/components/vote/VoteButton'
+import { ReportButton } from '@/components/vote/ReportButton'
 import { useVote } from '@/hooks/useVote'
+import { useReport } from '@/hooks/useReport'
 import { deriveHandle } from '@/lib/identity'
 import { timeAgo, formatPostNumber } from '@/lib/utils'
 import type { Post } from '@/types/supabase'
@@ -21,6 +23,10 @@ export function FeaturedPostCard({ post, postNumber, replyCount = 0, animate = f
     postId: post.id,
     upvotes: post.upvotes,
     downvotes: post.downvotes,
+  })
+  const { hasReported, loading: reportLoading, report } = useReport({
+    postId: post.id,
+    reports: post.reports ?? 0,
   })
 
   const inner = (
@@ -76,6 +82,11 @@ export function FeaturedPostCard({ post, postNumber, replyCount = 0, animate = f
             hasVoted={hasVoted}
             disabled={loading}
             onClick={() => vote('down')}
+          />
+          <ReportButton
+            hasReported={hasReported}
+            disabled={reportLoading}
+            onClick={() => report()}
           />
         </div>
       </div>

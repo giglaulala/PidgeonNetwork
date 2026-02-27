@@ -17,6 +17,7 @@ export interface Database {
           parent_id: string | null
           upvotes: number
           downvotes: number
+          reports: number
           created_at: string
         }
         Insert: {
@@ -26,6 +27,7 @@ export interface Database {
           parent_id?: string | null
           upvotes?: number
           downvotes?: number
+          reports?: number
           created_at?: string
         }
         Update: {
@@ -35,6 +37,28 @@ export interface Database {
           parent_id?: string | null
           upvotes?: number
           downvotes?: number
+          reports?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      reports: {
+        Row: {
+          id: string
+          post_id: string
+          fingerprint: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          post_id: string
+          fingerprint: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          post_id?: string
+          fingerprint?: string
           created_at?: string
         }
         Relationships: []
@@ -86,3 +110,4 @@ export interface Database {
 
 export type Post = Database['public']['Tables']['posts']['Row']
 export type Vote = Database['public']['Tables']['votes']['Row']
+export type Report = Database['public']['Tables']['reports']['Row']
