@@ -16,7 +16,8 @@ interface CompactPostCardProps {
 
 export function CompactPostCard({ post, postNumber, index = 0, animate = false }: CompactPostCardProps) {
   const handle = deriveHandle(post.anon_id.slice(0, 8))
-  const { upvotes, downvotes, userVote, loading, vote } = useVote({
+  const { upvotes, downvotes, hasVoted, loading, vote } = useVote({
+    postId: post.id,
     upvotes: post.upvotes,
     downvotes: post.downvotes,
   })
@@ -51,21 +52,27 @@ export function CompactPostCard({ post, postNumber, index = 0, animate = false }
       {/* Footer: votes inline */}
       <div className="flex items-center gap-3 pt-2 border-t border-border">
         <button
-          onClick={(e) => { e.preventDefault(); vote(post.id, 'up') }}
-          disabled={loading}
+          onClick={(e) => { e.preventDefault(); vote('up') }}
+          disabled={loading || hasVoted}
           aria-label="Upvote"
-          className={`font-mono text-[10px] tracking-widest transition-colors duration-150 disabled:cursor-not-allowed ${
-            userVote === 'up' ? 'text-white' : 'text-dim hover:text-white'
+          title={hasVoted ? 'already voted' : undefined}
+          className={`font-mono text-[10px] tracking-widest transition-opacity duration-150 ${
+            hasVoted || loading
+              ? 'opacity-30 cursor-not-allowed'
+              : 'text-dim hover:text-white cursor-pointer'
           }`}
         >
           + {upvotes}
         </button>
         <button
-          onClick={(e) => { e.preventDefault(); vote(post.id, 'down') }}
-          disabled={loading}
+          onClick={(e) => { e.preventDefault(); vote('down') }}
+          disabled={loading || hasVoted}
           aria-label="Downvote"
-          className={`font-mono text-[10px] tracking-widest transition-colors duration-150 disabled:cursor-not-allowed ${
-            userVote === 'down' ? 'text-white' : 'text-dim hover:text-white'
+          title={hasVoted ? 'already voted' : undefined}
+          className={`font-mono text-[10px] tracking-widest transition-opacity duration-150 ${
+            hasVoted || loading
+              ? 'opacity-30 cursor-not-allowed'
+              : 'text-dim hover:text-white cursor-pointer'
           }`}
         >
           - {downvotes}

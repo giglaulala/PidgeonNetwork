@@ -17,7 +17,8 @@ interface PostCardProps {
 
 export function PostCard({ post, replyCount = 0, showReplies = true, animate = false }: PostCardProps) {
   const handle = deriveHandle(post.anon_id.slice(0, 8))
-  const { upvotes, downvotes, userVote, loading, vote } = useVote({
+  const { upvotes, downvotes, hasVoted, loading, vote } = useVote({
+    postId: post.id,
     upvotes: post.upvotes,
     downvotes: post.downvotes,
   })
@@ -42,20 +43,23 @@ export function PostCard({ post, replyCount = 0, showReplies = true, animate = f
         {post.content}
       </p>
 
-      <div className="flex items-center gap-6 mt-4">
+      <div
+        className="flex items-center gap-6 mt-4"
+        onClick={(e) => e.preventDefault()}
+      >
         <VoteButton
           type="up"
           count={upvotes}
-          active={userVote === 'up'}
+          hasVoted={hasVoted}
           disabled={loading}
-          onClick={() => vote(post.id, 'up')}
+          onClick={() => vote('up')}
         />
         <VoteButton
           type="down"
           count={downvotes}
-          active={userVote === 'down'}
+          hasVoted={hasVoted}
           disabled={loading}
-          onClick={() => vote(post.id, 'down')}
+          onClick={() => vote('down')}
         />
         {showReplies && (
           <span className="font-mono text-xs text-dim tracking-widest">

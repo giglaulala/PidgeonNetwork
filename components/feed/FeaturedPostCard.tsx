@@ -17,7 +17,8 @@ interface FeaturedPostCardProps {
 
 export function FeaturedPostCard({ post, postNumber, replyCount = 0, animate = false }: FeaturedPostCardProps) {
   const handle = deriveHandle(post.anon_id.slice(0, 8))
-  const { upvotes, downvotes, userVote, loading, vote } = useVote({
+  const { upvotes, downvotes, hasVoted, loading, vote } = useVote({
+    postId: post.id,
     upvotes: post.upvotes,
     downvotes: post.downvotes,
   })
@@ -58,20 +59,23 @@ export function FeaturedPostCard({ post, postNumber, replyCount = 0, animate = f
             {replyCount} {replyCount === 1 ? 'reply' : 'replies'}
           </span>
         )}
-        <div className="flex items-center gap-5">
+        <div
+          className="flex items-center gap-5"
+          onClick={(e) => e.preventDefault()}
+        >
           <VoteButton
             type="up"
             count={upvotes}
-            active={userVote === 'up'}
+            hasVoted={hasVoted}
             disabled={loading}
-            onClick={() => vote(post.id, 'up')}
+            onClick={() => vote('up')}
           />
           <VoteButton
             type="down"
             count={downvotes}
-            active={userVote === 'down'}
+            hasVoted={hasVoted}
             disabled={loading}
-            onClick={() => vote(post.id, 'down')}
+            onClick={() => vote('down')}
           />
         </div>
       </div>

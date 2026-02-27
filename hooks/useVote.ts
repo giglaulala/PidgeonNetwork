@@ -1,79 +1,73 @@
 'use client'
 
-import { useState } from 'react'
-import { getHashedAnonId } from '@/lib/identity'
+import { useEffect, useState } from 'react'
+import { getVoteFingerprint } from '@/lib/identity'
+import { hasVotedPost, markVoted } from '@/lib/voted-posts'
 
-type VoteType = 'up' | 'down'
-
-interface VoteState {
+interface UseVoteOptions {
+  postId: string
   upvotes: number
   downvotes: number
-  userVote: VoteType | null
 }
 
-export function useVote(initial: { upvotes: number; downvotes: number }) {
-  const [state, setState] = useState<VoteState>({
-    upvotes: initial.upvotes,
-    downvotes: initial.downvotes,
-    userVote: null,
-  })
+export function useVote({ postId, upvotes: initialUp, downvotes: initialDown }: UseVoteOptions) {
+  const [upvotes, setUpvotes] = useState(initialUp ?? 0)
+  const [downvotes, setDownvotes] = useState(initialDown ?? 0)
+  const [hasVoted, setHasVoted] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function vote(postId: string, type: VoteType) {
-    if (loading) return
+  // Layer 1 — localStorage check on mount
+  useEffect(() => {
+    setHasVoted(hasVotedPost(postId))
+  }, [postId])
 
-    const prevState = { ...state }
-    const isToggle = state.userVote === type
+  async function vote(type: 'up' | 'down') {
+    if (loading || hasVoted) return
 
     // Optimistic update
-    setState((prev) => {
-      if (isToggle) {
-        return {
-          ...prev,
-          upvotes: type === 'up' ? prev.upvotes - 1 : prev.upvotes,
-          downvotes: type === 'down' ? prev.downvotes - 1 : prev.downvotes,
-          userVote: null,
-        }
-      }
-      return {
-        upvotes: type === 'up'
-          ? prev.upvotes + 1
-          : prev.userVote === 'up'
-          ? prev.upvotes - 1
-          : prev.upvotes,
-        downvotes: type === 'down'
-          ? prev.downvotes + 1
-          : prev.userVote === 'down'
-          ? prev.downvotes - 1
-          : prev.downvotes,
-        userVote: type,
-      }
-    })
+    const prev = { upvotes, downvotes }
+    if (type === 'up') setUpvotes((u) => u + 1)
+    else setDownvotes((d) => d + 1)
 
     setLoading(true)
     setError(null)
 
     try {
-      const hashedId = await getHashedAnonId()
+      // Layer 2 — compute fingerprint client-side
+      const fingerprint = await getVoteFingerprint(postId)
+
       const res = await fetch('/api/vote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ postId, voteType: type, hashedAnonId: hashedId }),
+        body: JSON.stringify({ postId, voteType: type, fingerprint }),
       })
 
-      if (!res.ok) {
-        const data = await res.json() as { error?: string }
-        throw new Error(data.error ?? 'Vote failed')
+      if (res.status === 409) {
+        // Server says already voted — sync localStorage and rollback count
+        markVoted(postId)
+        setHasVoted(true)
+        setUpvotes(prev.upvotes)
+        setDownvotes(prev.downvotes)
+        return
       }
+
+      if (!res.ok) {
+        throw new Error('Vote failed')
+      }
+
+      // Confirmed — persist to localStorage
+      markVoted(postId)
+      setHasVoted(true)
     } catch (err) {
-      // Rollback on failure
-      setState(prevState)
+      // Rollback optimistic update
+      setUpvotes(prev.upvotes)
+      setDownvotes(prev.downvotes)
       setError(err instanceof Error ? err.message : 'Vote failed')
     } finally {
       setLoading(false)
     }
   }
 
-  return { ...state, loading, error, vote }
+  return { upvotes, downvotes, hasVoted, loading, error, vote }
 }

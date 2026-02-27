@@ -29,14 +29,15 @@ create table posts (
   created_at timestamptz default now()
 );
 
--- Votes table
+-- Votes table (drop first if re-running)
+drop table if exists votes cascade;
 create table votes (
   id uuid primary key default gen_random_uuid(),
-  post_id uuid references posts(id) on delete cascade,
-  anon_id text not null,
-  vote_type text check (vote_type in ('up', 'down')),
+  post_id uuid references posts(id) on delete cascade not null,
+  fingerprint text not null,
+  vote_type text not null check (vote_type in ('up', 'down')),
   created_at timestamptz default now(),
-  unique(post_id, anon_id)
+  unique(fingerprint)
 );
 
 -- RLS: Posts
@@ -44,12 +45,10 @@ alter table posts enable row level security;
 create policy "Public read" on posts for select using (true);
 create policy "Anon insert" on posts for insert with check (anon_id is not null);
 
--- RLS: Votes
+-- RLS: Votes (fingerprint must be 64 hex chars = SHA-256)
 alter table votes enable row level security;
-create policy "Public read" on votes for select using (true);
-create policy "Anon insert" on votes for insert with check (anon_id is not null);
-create policy "Anon delete" on votes for delete using (true);
-create policy "Anon update" on votes for update using (true);
+create policy "public read" on votes for select using (true);
+create policy "public insert" on votes for insert with check (char_length(fingerprint) = 64);
 
 -- Realtime
 alter publication supabase_realtime add table posts;

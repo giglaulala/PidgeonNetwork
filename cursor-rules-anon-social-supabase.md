@@ -1,4 +1,5 @@
 # 🕶️ Cursor Rules — Anonymous Social Media App
+
 > Minimalist · Black & White · Fully Anonymous · Supabase Backend
 
 ---
@@ -11,52 +12,53 @@ You are building a **fully anonymous social media platform**. There are no accou
 
 ## ⚙️ Tech Stack (Follow Exactly)
 
-| Layer | Choice | Notes |
-|---|---|---|
-| Framework | **Next.js 14 (App Router)** | Use `app/` directory, server components by default |
-| Language | **TypeScript** — strict mode | `"strict": true` in tsconfig, no `any` |
-| Styling | **Tailwind CSS** | Custom B&W token system defined below |
-| Components | **shadcn/ui** | Unstyled base — override all colors to B&W |
-| Animations | **Framer Motion** | Subtle only: fade-ins, slide-ups, no bounce |
-| State | **Zustand** | For anonId, feed state, modals |
-| Database | **Supabase** | Postgres, Realtime, Storage all via Supabase |
-| ORM / Queries | **Supabase JS Client v2** (`@supabase/supabase-js`) | Use typed client with generated types |
-| Auth | **None — anonymous only** | UUID v4 anonId in `localStorage` + `httpOnly` cookie |
-| Real-time | **Supabase Realtime** | Subscribe to new posts/votes live |
-| Rate Limiting | **Upstash Redis** | Protect post/vote endpoints by anonId + IP |
-| Deployment | **Vercel** | Use `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` env vars |
+| Layer         | Choice                                              | Notes                                                                     |
+| ------------- | --------------------------------------------------- | ------------------------------------------------------------------------- |
+| Framework     | **Next.js 14 (App Router)**                         | Use `app/` directory, server components by default                        |
+| Language      | **TypeScript** — strict mode                        | `"strict": true` in tsconfig, no `any`                                    |
+| Styling       | **Tailwind CSS**                                    | Custom B&W token system defined below                                     |
+| Components    | **shadcn/ui**                                       | Unstyled base — override all colors to B&W                                |
+| Animations    | **Framer Motion**                                   | Subtle only: fade-ins, slide-ups, no bounce                               |
+| State         | **Zustand**                                         | For anonId, feed state, modals                                            |
+| Database      | **Supabase**                                        | Postgres, Realtime, Storage all via Supabase                              |
+| ORM / Queries | **Supabase JS Client v2** (`@supabase/supabase-js`) | Use typed client with generated types                                     |
+| Auth          | **None — anonymous only**                           | UUID v4 anonId in `localStorage` + `httpOnly` cookie                      |
+| Real-time     | **Supabase Realtime**                               | Subscribe to new posts/votes live                                         |
+| Rate Limiting | **Upstash Redis**                                   | Protect post/vote endpoints by anonId + IP                                |
+| Deployment    | **Vercel**                                          | Use `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` env vars |
 
 ---
 
 ## 🗄️ Supabase Setup Rules
 
 ### Client Initialization
+
 Always initialize like this. Never reinitialize per component.
 
 ```ts
 // lib/supabase/client.ts
-import { createBrowserClient } from '@supabase/ssr'
-import type { Database } from '@/types/supabase'
+import { createBrowserClient } from "@supabase/ssr";
+import type { Database } from "@/types/supabase";
 
 export const supabase = createBrowserClient<Database>(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+);
 ```
 
 ```ts
 // lib/supabase/server.ts
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-import type { Database } from '@/types/supabase'
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import type { Database } from "@/types/supabase";
 
 export function createSupabaseServerClient() {
-  const cookieStore = cookies()
+  const cookieStore = cookies();
   return createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    { cookies: { get: (name) => cookieStore.get(name)?.value } }
-  )
+    { cookies: { get: (name) => cookieStore.get(name)?.value } },
+  );
 }
 ```
 
@@ -89,6 +91,7 @@ alter publication supabase_realtime add table posts;
 ```
 
 ### Row Level Security (Always Enable)
+
 ```sql
 -- Posts: anyone can read, insert only with valid anon_id
 alter table posts enable row level security;
@@ -102,7 +105,9 @@ create policy "Anon insert" on votes for insert with check (anon_id is not null)
 ```
 
 ### Type Generation
+
 Always generate types and commit them:
+
 ```bash
 npx supabase gen types typescript --project-id YOUR_PROJECT_ID > types/supabase.ts
 ```
@@ -113,33 +118,34 @@ npx supabase gen types typescript --project-id YOUR_PROJECT_ID > types/supabase.
 
 ```ts
 // lib/identity.ts
-import { v4 as uuidv4 } from 'uuid'
+import { v4 as uuidv4 } from "uuid";
 
-const KEY = 'anon_id'
+const KEY = "anon_id";
 
 export function getAnonId(): string {
-  if (typeof window === 'undefined') return ''
-  let id = localStorage.getItem(KEY)
+  if (typeof window === "undefined") return "";
+  let id = localStorage.getItem(KEY);
   if (!id) {
-    id = uuidv4()
-    localStorage.setItem(KEY, id)
+    id = uuidv4();
+    localStorage.setItem(KEY, id);
   }
-  return id
+  return id;
 }
 
 // Never store raw UUID in DB — always hash it
 export async function getHashedAnonId(): Promise<string> {
-  const id = getAnonId()
-  const encoder = new TextEncoder()
-  const data = encoder.encode(id)
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  const id = getAnonId();
+  const encoder = new TextEncoder();
+  const data = encoder.encode(id);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   return Array.from(new Uint8Array(hashBuffer))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 ```
 
 **Rules:**
+
 - Raw UUID stays in `localStorage` only — never sent to server, never stored in DB
 - DB only ever receives the SHA-256 hash of the UUID
 - Generate a random display handle from the hash (e.g. `ghost_4f2a`) for UI only
@@ -150,50 +156,59 @@ export async function getHashedAnonId(): Promise<string> {
 ## 🎨 Design System — Black & White Minimalism
 
 ### Philosophy
+
 - **Zero color.** No gradients. No brand colors. No accents whatsoever.
 - Depth comes from **font weight contrast, whitespace, and thin 1px borders** — never color.
 - Dark mode is the default. Light mode is optional.
 - Every element must justify its existence. If it doesn't carry information, cut it.
 
 ### Color Tokens (Tailwind Config)
+
 ```ts
 // tailwind.config.ts
-import type { Config } from 'tailwindcss'
+import type { Config } from "tailwindcss";
 
 export default {
-  darkMode: 'class',
+  darkMode: "class",
   theme: {
     extend: {
       colors: {
-        ink:           '#000000',
-        'ink-soft':    '#111111',
-        'ink-muted':   '#1c1c1c',
-        dim:           '#555555',
-        muted:         '#888888',
-        border:        '#2a2a2a',
-        'border-soft': '#3a3a3a',
-        surface:       '#0d0d0d',
-        'surface-2':   '#161616',
-        'surface-3':   '#1f1f1f',
-        fog:           '#cccccc',
-        paper:         '#f2f2f2',
-        white:         '#ffffff',
+        ink: "#000000",
+        "ink-soft": "#111111",
+        "ink-muted": "#1c1c1c",
+        dim: "#555555",
+        muted: "#888888",
+        border: "#2a2a2a",
+        "border-soft": "#3a3a3a",
+        surface: "#0d0d0d",
+        "surface-2": "#161616",
+        "surface-3": "#1f1f1f",
+        fog: "#cccccc",
+        paper: "#f2f2f2",
+        white: "#ffffff",
       },
       fontFamily: {
-        display: ['"DM Serif Display"', 'Georgia', 'serif'],   // Headlines
-        mono:    ['"JetBrains Mono"', '"Fira Code"', 'monospace'], // Handles, timestamps
-        body:    ['"Inter"', 'system-ui', 'sans-serif'],       // Body text only
+        display: ['"DM Serif Display"', "Georgia", "serif"], // Headlines
+        mono: ['"JetBrains Mono"', '"Fira Code"', "monospace"], // Handles, timestamps
+        body: ['"Inter"', "system-ui", "sans-serif"], // Body text only
       },
       fontSize: {
-        'display-xl': ['3.5rem',  { lineHeight: '1.05', letterSpacing: '-0.03em' }],
-        'display-lg': ['2.25rem', { lineHeight: '1.1',  letterSpacing: '-0.02em' }],
+        "display-xl": [
+          "3.5rem",
+          { lineHeight: "1.05", letterSpacing: "-0.03em" },
+        ],
+        "display-lg": [
+          "2.25rem",
+          { lineHeight: "1.1", letterSpacing: "-0.02em" },
+        ],
       },
     },
   },
-} satisfies Config
+} satisfies Config;
 ```
 
 ### Typography Rules
+
 - **Post content:** `font-body text-white text-[15px] leading-relaxed`
 - **Anon handles:** `font-mono text-muted text-xs tracking-widest uppercase`
 - **Timestamps:** `font-mono text-dim text-[11px]`
@@ -202,6 +217,7 @@ export default {
 - Never use font sizes between 13px and 15px — too ambiguous
 
 ### Spacing System
+
 - Base unit: `4px` (Tailwind default)
 - Component padding: `p-4` or `p-6` only
 - Between posts: `gap-px` (1px divider line, no margin)
@@ -211,14 +227,19 @@ export default {
 ### Component Patterns
 
 **Post Card:**
+
 ```tsx
 <article className="border-b border-border px-4 py-5 hover:bg-surface-2 transition-colors duration-150">
   <div className="flex items-center gap-3 mb-3">
-    <span className="font-mono text-muted text-xs tracking-widest">ghost_4f2a</span>
+    <span className="font-mono text-muted text-xs tracking-widest">
+      ghost_4f2a
+    </span>
     <span className="text-border">·</span>
     <time className="font-mono text-dim text-[11px]">2m ago</time>
   </div>
-  <p className="text-white text-[15px] leading-relaxed max-w-[65ch]">{content}</p>
+  <p className="text-white text-[15px] leading-relaxed max-w-[65ch]">
+    {content}
+  </p>
   <div className="flex items-center gap-6 mt-4">
     <VoteButton type="up" count={upvotes} />
     <VoteButton type="down" count={downvotes} />
@@ -228,20 +249,22 @@ export default {
 ```
 
 **Input / Compose:**
+
 ```tsx
 <textarea
   className="w-full bg-transparent text-white text-[15px] leading-relaxed
              border border-border focus:border-white outline-none resize-none
              p-4 placeholder:text-dim transition-colors duration-200"
-  placeholder="say something. no one knows it's you."
+  placeholder="say something. no one knows it's you.(yeah and dont forget the #)"
   maxLength={500}
 />
 ```
 
 **Buttons:**
+
 ```tsx
 // Primary
-<button className="px-5 py-2 bg-white text-ink text-sm font-medium 
+<button className="px-5 py-2 bg-white text-ink text-sm font-medium
                    hover:bg-fog transition-colors duration-150">
   Post
 </button>
@@ -295,32 +318,38 @@ src/
 
 ```ts
 // hooks/useFeed.ts
-import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase/client'
-import type { Database } from '@/types/supabase'
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase/client";
+import type { Database } from "@/types/supabase";
 
-type Post = Database['public']['Tables']['posts']['Row']
+type Post = Database["public"]["Tables"]["posts"]["Row"];
 
 export function useFeed(initialPosts: Post[]) {
-  const [posts, setPosts] = useState(initialPosts)
+  const [posts, setPosts] = useState(initialPosts);
 
   useEffect(() => {
     const channel = supabase
-      .channel('public:posts')
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'posts',
-        filter: 'parent_id=is.null'
-      }, (payload) => {
-        setPosts(prev => [payload.new as Post, ...prev])
-      })
-      .subscribe()
+      .channel("public:posts")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "posts",
+          filter: "parent_id=is.null",
+        },
+        (payload) => {
+          setPosts((prev) => [payload.new as Post, ...prev]);
+        },
+      )
+      .subscribe();
 
-    return () => { supabase.removeChannel(channel) }
-  }, [])
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
-  return posts
+  return posts;
 }
 ```
 
@@ -355,6 +384,7 @@ export function useFeed(initialPosts: Post[]) {
 ## ✅ Component Checklist
 
 Before marking any component done:
+
 - [ ] Uses only B&W color tokens — no other colors
 - [ ] Dark background (`bg-surface` or `bg-ink-soft`) by default
 - [ ] Typography follows font family rules (display/mono/body)

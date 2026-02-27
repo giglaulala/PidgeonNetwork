@@ -25,6 +25,18 @@ export async function getHashedAnonId(): Promise<string> {
     .join('')
 }
 
+// SHA-256(anonId + postId) — unique per (user, post) pair
+export async function getVoteFingerprint(postId: string): Promise<string> {
+  const id = getAnonId()
+  if (!id) return ''
+  const encoder = new TextEncoder()
+  const data = encoder.encode(id + postId)
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hashBuffer))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
 export function deriveHandle(hash: string): string {
   const adjectives = ['ghost', 'void', 'null', 'anon', 'shade', 'echo', 'veil', 'haze']
   const adj = adjectives[parseInt(hash.slice(0, 2), 16) % adjectives.length]

@@ -15,7 +15,7 @@ interface ComposeBoxProps {
 
 export function ComposeBox({
   parentId,
-  placeholder = "say something. no one knows it's you.",
+  placeholder = "say something. no one knows it's you. (yeah and don't forget the #)",
   onSuccess,
 }: ComposeBoxProps) {
   const router = useRouter()

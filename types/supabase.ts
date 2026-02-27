@@ -43,21 +43,21 @@ export interface Database {
         Row: {
           id: string
           post_id: string
-          anon_id: string
+          fingerprint: string
           vote_type: 'up' | 'down'
           created_at: string
         }
         Insert: {
           id?: string
           post_id: string
-          anon_id: string
+          fingerprint: string
           vote_type: 'up' | 'down'
           created_at?: string
         }
         Update: {
           id?: string
           post_id?: string
-          anon_id?: string
+          fingerprint?: string
           vote_type?: 'up' | 'down'
           created_at?: string
         }
